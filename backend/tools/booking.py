@@ -23,6 +23,7 @@ def prepare_booking(event_id:str):
     response = httpx.get(url, params=params)
     response.raise_for_status()
     event = response.json()
+    print("prepare booking called")
     venue = (
         event.get("_embedded", {})
         .get("venues", [{}])[0]

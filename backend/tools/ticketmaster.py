@@ -28,6 +28,9 @@ def search_events_by_location(location: str,country_code: str | None = None)->li
     data = response.json()
     events = data.get("_embedded", {}).get("events", [])
     result = []
+    if not events:
+        return [{"message": f"No events found for {location}."}]
+
     for event in events:
         dates = event.get("dates", {}).get("start", {})
 

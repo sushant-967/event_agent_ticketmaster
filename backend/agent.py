@@ -1,13 +1,13 @@
 from langchain_groq import ChatGroq
 from langchain.agents import create_agent
-from backend.memory.memory import checkpointer,thread_config
+from backend.memory.memory import checkpointer,get_thread_config
 from backend.config import GROQ_API_KEY
 from backend.tools.ticketmaster import (
     search_events_by_location,
     get_event_details,
     get_event_price
 )
-
+from backend.schemas import AgentTurnResult
 from backend.memory.database import (
     initialize_database,
     save_message,
@@ -51,9 +51,6 @@ Rules:
 
 # Initialize SQLite database
 initialize_database()
-config=thread_config
-# Use the same session ID as LangGraph
-session_id = config["configurable"]["thread_id"]
 
 
 model = ChatGroq(
@@ -115,9 +112,10 @@ def _drain(agent, result: AgentTurnResult, config: dict):
     booking_rejected = False
     max_interrupts = 3
     interrupt_count = 0
-
+    print(">>> _drain() called with result:", result.messages if result.messages else None, flush=True)
+    print("***********************************")
     while result.pending_interrupt is not None:
-
+        print("\nTool execution requires approval")
         interrupt_count += 1
 
         if interrupt_count > max_interrupts:
@@ -158,25 +156,34 @@ def _drain(agent, result: AgentTurnResult, config: dict):
         )
 
     return result
+def run_agent_turn(thread_id: str,user_input: str) -> AgentTurnResult:
+    print("\n🎟️ Welcome to TicketMate AI Assistant!")
+    print("Hello! 👋 How can I help you today?\n")
+    print("Type exit or q or quit to stop.")
 
-print("\n🎟️ Welcome to TicketMate AI Assistant!")
-print("Hello! 👋 How can I help you today?\n")
-print("Type exit or q or quit to stop.")
+    config = get_thread_config(thread_id)
+    session_id = config["configurable"]["thread_id"]
 
-session_id = config["configurable"]["thread_id"]
+   
 
-history = get_conversation_history(session_id)
-
-print("\nPrevious Conversation:")
-
-for message in history:
-    print(f"{message['role']}: {message['content']}")
-while True:
-    user_input=input("You: ").strip()
+   
+        
     if user_input.lower() in {"exit","q","quit"}:
-        break
+        print("Exiting the assistant. Goodbye!")
+        return AgentTurnResult(
+            text="Exiting the assistant. Goodbye!",
+            structured=None,
+            messages=[],
+            pending_interrupt=None
+        )
     if not user_input:
-        continue
+        print("No input provided. Please enter a message.")
+        return AgentTurnResult(
+            text="No input provided. Please enter a message.",
+            structured=None,
+            messages=[],
+            pending_interrupt=None
+        )
     
     # 1. Persist user message
     save_message(
@@ -185,8 +192,13 @@ while True:
         content=user_input
     )
 
-    result=_drain(agent,start_turn(agent,user_input,config),config)
-    print(result.text)
+    # Start exactly ONE agent turn
+    result = start_turn(
+        agent,
+        user_input,
+        config
+    )
+
     # 4. Persist assistant response
     if result.text:
         save_message(
@@ -195,10 +207,14 @@ while True:
             content=result.text
         )
 
-    
-    
-    
-    
-final_response = result.text
-print("\nAgent Response:")
-print(final_response)
+    final_response = result.text
+    print("Inside run_agent_turn final_response:", final_response, flush=True)
+    return AgentTurnResult(
+        text=final_response,
+        structured=result.structured,
+        messages=result.messages,
+        pending_interrupt=result.pending_interrupt
+    )
+
+
+

@@ -1,7 +1,7 @@
 
 from pydantic import BaseModel,Field
-from typing import Optional,Literal
-
+from typing import Any, Optional,Literal
+from dataclasses import dataclass
 
 class ChatRequest(BaseModel):
     message:str
@@ -25,3 +25,16 @@ class TurnSummary(BaseModel):
     status: Literal["ok","needs_input","failed"]|None=Field(
         description="ok if the request is done , needs_input if you must ask user, failed if the request failed"
     )
+
+
+@dataclass
+class AgentTurnResult:
+    text: str
+    structured: TurnSummary | None
+    messages: list[Any]
+    pending_interrupt: dict[str, Any] | None
+
+
+class HITLDecisionRequest(BaseModel):
+    thread_id: str
+    decision: Literal["approve", "reject"]

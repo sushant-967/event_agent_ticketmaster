@@ -3,14 +3,9 @@ from backend.schemas import TurnSummary
 from typing import Any
 from langgraph.types import Command
 from backend.messages import last_ai_text,last_tool_text
+from backend.schemas import AgentTurnResult
 
 
-@dataclass
-class AgentTurnResult:
-    text:str    #agent's reply
-    structured: TurnSummary | None
-    messages: list[Any]
-    pending_interrupt: dict[str,Any] | None
 
 
 def _as_summary(value: Any) -> TurnSummary | None:

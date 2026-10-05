@@ -10,8 +10,9 @@ checkpointer_context = SqliteSaver.from_conn_string(DB_PATH)
 checkpointer = checkpointer_context.__enter__()
 
 # Thread configuration
-thread_config = {
-    "configurable": {
-        "thread_id": "ticketmate-session"
+def get_thread_config(thread_id: str) -> dict:
+    return {
+        "configurable": {
+            "thread_id": thread_id
+        }
     }
-}
